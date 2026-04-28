@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+env/
+build/
+dist/
+*.egg-info/
+
+# Django / app data
+db.sqlite3
+media/
+staticfiles/
+
+# Virtual environments
+.venv/
+env/
+
+# Tooling artifacts
+.pytest_cache/
+.pyright/
+.ruff_cache/
+.mypy_cache/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Environment files
+.env
+.env.local
+
+# uv lockfiles
+.uv/
+
+# macOS
+.DS_Store
