@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bean-circuit-api"
+version = "0.1.0"
+description = "Django API for AI-assisted neighborhood coffee-circuit planning"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "Django>=5.1",
+  "pydantic>=2.7",
+  "pydantic-ai>=0.0.11",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-django>=4.8",
+  "pyright>=1.1",
+  "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["."]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PL"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-width = 2
+
+[tool.pyright]
+include = ["."]
+exclude = [".venv", "build", "dist", "**/.github", "**/.ruff_cache", "**/.pytest_cache"]
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+pythonVersion = "3.13"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+DJANGO_SETTINGS_MODULE = "bean_circuit_api.settings"
+addopts = "-q"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.pytest]
+testpaths = ["circuits/tests"]
