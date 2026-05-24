@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Iterable, List
+from typing import Callable, Iterable, List
 
 from django.db import transaction
 from django.db.models import QuerySet
@@ -32,7 +32,14 @@ class CircuitService:
             queryset = queryset.filter(neighborhood__iexact=neighborhood)
         return queryset.order_by("name")
 
-    def create_shop(self, name: str, neighborhood: str, address: str, signature_drink: str, notes: str = "") -> Shop:
+    def create_shop(
+        self,
+        name: str,
+        neighborhood: str,
+        address: str,
+        signature_drink: str,
+        notes: str = "",
+    ) -> Shop:
         return Shop.objects.create(
             name=name,
             neighborhood=neighborhood,
@@ -70,26 +77,29 @@ class CircuitService:
         story_input = self._build_story_prompt(circuit)
         generator = self._build_story_generator()
         if generator is None:
-            text = self._fallback_story(circuit, request.mood)
+            text = self._fallback_story(circuit=circuit, mood=request.mood)
         else:
             text = generator(story_input, request.mood)
         return RouteStory(text=text)
 
     def _build_story_prompt(self, circuit: Circuit) -> str:
         shop_names = self._ordered_shop_names(circuit)
+        if not shop_names:
+            return (
+                "Create a warm narrative about this neighborhood coffee circuit: "
+                f"{circuit.name} in {circuit.neighborhood_focus}."
+            )
         return (
             "Create a warm narrative about this neighborhood coffee circuit: "
-            f"{circuit.name} in {circuit.neighborhood_focus}."
-            f" Include in order: {', '.join(shop_names)}."
+            f"{circuit.name} in {circuit.neighborhood_focus}. "
+            f"Include in order: {', '.join(shop_names)}."
         )
 
     def _ordered_shop_names(self, circuit: Circuit) -> List[str]:
-        stops: Iterable[CircuitStop] = (
-            circuit.circuitstop_set.select_related("shop").order_by("position").all()
-        )
+        stops: Iterable[CircuitStop] = circuit.circuitstop_set.select_related("shop").order_by("position").all()
         return [stop.shop.name for stop in stops]
 
-    def _build_story_generator(self) -> callable[[str, str], str] | None:
+    def _build_story_generator(self) -> Callable[[str, str], str] | None:
         if Agent is None:
             return None
 
@@ -108,23 +118,30 @@ class CircuitService:
         def _generate_story(route_prompt: str, mood: str) -> str:
             try:
                 result = agent.run_sync(f"{route_prompt} Mood: {mood}.")
+                if hasattr(result, "data"):
+                    return str(result.data)
+                return str(result)
             except Exception:
-                return self._fallback_story(route_prompt=circuit_prompt(route_prompt), mood=mood)
-            if hasattr(result, "data"):
-                return str(result.data)
-            return str(result)
+                return self._fallback_story(route_prompt=route_prompt, mood=mood)
 
         return _generate_story
 
-    def _fallback_story(self, circuit: Circuit | None = None, mood: str = "balanced", route_prompt: str | None = None) -> str:
-        if route_prompt is None and circuit is not None:
-            names = ", ".join(self._ordered_shop_names(circuit))
-            route_prompt = (
-                f"A {mood} circuit through {circuit.neighborhood_focus}: "
-                f"{circuit.name} featuring {names}."
-            )
+    def _fallback_story(
+        self,
+        circuit: Circuit | None = None,
+        mood: str = "balanced",
+        route_prompt: str | None = None,
+    ) -> str:
         if route_prompt is None:
-            route_prompt = "A balanced coffee circuit through a local neighborhood."
+            if circuit is None:
+                route_prompt = "A balanced coffee circuit through a local neighborhood."
+            else:
+                names = ", ".join(self._ordered_shop_names(circuit))
+                route_prompt = (
+                    f"A {mood} circuit through {circuit.neighborhood_focus}: "
+                    f"{circuit.name} featuring {names}."
+                )
+        route_prompt = route_prompt.strip()
         return f"{route_prompt} A cup at each stop and a slow walk between them complete this route."
 
 
