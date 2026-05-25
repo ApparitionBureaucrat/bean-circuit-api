@@ -1,26 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from circuits.services import CircuitService
 
 
-@dataclass
-class FakeShop:
-    id: int
-    name: str
-
-
-@dataclass
-class FakeCircuit:
-    id: int
-    name: str
-    neighborhood_focus: str
-    shops: list[FakeShop]
-
-
-def test_fallback_story_mentions_all_components() -> None:
+def test_fallback_story_uses_prompt_override() -> None:
     service = CircuitService()
-    story = service._fallback_story(circuit=FakeCircuit(1, "Neighborhood Trail", "Midtown", []), mood="playful")
-    assert "Neighborhood Trail" in story
-    assert "playful" in story
+    story = service._fallback_story(route_prompt="A playful dawn circuit", mood="playful")
+    assert "A playful dawn circuit" in story
+    assert "A cup at each stop" in story
