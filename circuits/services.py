@@ -143,9 +143,3 @@ class CircuitService:
                 )
         route_prompt = route_prompt.strip()
         return f"{route_prompt} A cup at each stop and a slow walk between them complete this route."
-
-
-def circuit_prompt(prompt: str) -> str:
-    """Small normalizer to keep story fallbacks stable across retries."""
-
-    return prompt.strip() if prompt else "coffee circuit"
