@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from pydantic import ValidationError
 
@@ -69,6 +70,8 @@ def circuit_story_view(request: HttpRequest, circuit_id: int) -> HttpResponse:
             data = _decode_payload(request)
             request_payload = StoryRequest.model_validate(data)
             story = _service.generate_story_for_circuit(circuit, request_payload)
+        except ObjectDoesNotExist as error:
+            return _error_payload(str(error), status=404)
         except (ValueError, ValidationError) as error:
             return _error_payload(str(error))
         return _story_payload(story, circuit_id)
@@ -76,8 +79,8 @@ def circuit_story_view(request: HttpRequest, circuit_id: int) -> HttpResponse:
     if request.method == "GET":
         try:
             circuit = _service.get_circuit(circuit_id)
-        except Exception as error:
-            return _error_payload(str(error))
+        except ObjectDoesNotExist as error:
+            return _error_payload(str(error), status=404)
         return JsonResponse(_circuit_to_payload(circuit))
 
     return _error_payload("Method not allowed", status=405)
