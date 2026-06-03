@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, List
 
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Case, IntegerField, QuerySet, When
 
 from .models import Circuit, CircuitStop, Shop
 from .schemas import CircuitCreate, StoryRequest
@@ -49,11 +49,26 @@ class CircuitService:
         )
 
     def create_circuit(self, payload: CircuitCreate) -> Circuit:
-        shops: List[Shop] = list(Shop.objects.filter(id__in=payload.shop_ids))
+        order_by_input = Case(
+            *[
+                When(id=shop_id, then=position)
+                for position, shop_id in enumerate(payload.shop_ids)
+            ],
+            default=0,
+            output_field=IntegerField(),
+        )
+        shops: List[Shop] = list(
+            Shop.objects.filter(id__in=payload.shop_ids).order_by(order_by_input)
+        )
         if len(shops) != len(payload.shop_ids):
             existing_ids = {shop.id for shop in shops}
-            missing = {shop_id for shop_id in payload.shop_ids if shop_id not in existing_ids}
+            missing = {
+                shop_id for shop_id in payload.shop_ids if shop_id not in existing_ids
+            }
             raise ValueError(f"Unknown shops referenced: {sorted(missing)}")
+
+        if len(set(payload.shop_ids)) != len(payload.shop_ids):
+            raise ValueError("Shop IDs for a circuit must be unique")
 
         with transaction.atomic():
             circuit = Circuit.objects.create(
